@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How It Works — Agent Identity Bridge</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #0a0a0f; color: #e0e0e0; overflow-x: hidden; }
+
+  .hero { text-align: center; padding: 60px 20px 30px; }
+  .hero h1 { font-size: 2.2rem; background: linear-gradient(135deg, #7b61ff, #00d4ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p { color: #777; margin-top: 10px; font-size: 1rem; }
+  .hero .subtitle { color: #555; font-size: 0.85rem; margin-top: 20px; }
+
+  /* ===== ANIMATED BRIDGE SCENE ===== */
+  .scene { position: relative; max-width: 1000px; margin: 40px auto; height: 420px; padding: 0 20px; }
+
+  .chain {
+    position: absolute; top: 60px; width: 260px; height: 300px;
+    background: #12121a; border: 1px solid #2a2a3a; border-radius: 16px; padding: 20px;
+    transition: border-color 0.5s;
+  }
+  .chain.base { left: 40px; border-top: 3px solid #7b61ff; }
+  .chain.dest { right: 40px; border-top: 3px solid #00d4ff; }
+  .chain.active { border-color: #444; }
+
+  .chain-title {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 14px;
+  }
+  .chain.base .chain-title { color: #7b61ff; }
+  .chain.dest .chain-title { color: #00d4ff; }
+
+  /* Agent card inside chain */
+  .agent-card {
+    background: #1a1a2e; border-radius: 10px; padding: 14px; margin: 8px 0;
+    border: 1px solid #2a2a3a; transition: all 0.5s;
+  }
+  .agent-card .name { font-size: 0.85rem; color: #fff; font-weight: 600; }
+  .agent-card .detail { font-size: 0.7rem; color: #666; margin-top: 4px; }
+  .agent-card .rep-bar {
+    margin-top: 8px; height: 6px; border-radius: 3px; background: #222;
+    overflow: hidden; position: relative;
+  }
+  .agent-card .rep-fill {
+    height: 100%; border-radius: 3px; transition: width 1s ease;
+    background: linear-gradient(90deg, #ff6161, #ffd761, #61ffb4);
+  }
+  .agent-card .rep-label { font-size: 0.65rem; color: #555; margin-top: 4px; }
+
+  /* Cache slot on destination */
+  .cache-slot {
+    background: #1a1a2e; border-radius: 10px; padding: 14px; margin: 8px 0;
+    border: 1px dashed #2a2a3a; min-height: 80px; transition: all 0.5s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cache-slot.empty { color: #333; font-size: 0.75rem; }
+  .cache-slot.filled {
+    border-style: solid; border-color: #00d4ff33;
+    flex-direction: column; align-items: flex-start;
+  }
+  .cache-slot .name { font-size: 0.85rem; color: #fff; font-weight: 600; }
+  .cache-slot .detail { font-size: 0.7rem; color: #666; margin-top: 4px; }
+  .cache-slot .timestamp { font-size: 0.6rem; color: #00d4ff88; margin-top: 6px; }
+
+  /* Vault */
+  .vault-box {
+    background: #1a1a2e; border-radius: 10px; padding: 10px 14px; margin-top: 8px;
+    border: 1px solid #2a2a3a; transition: all 0.5s;
+  }
+  .vault-box .label { font-size: 0.7rem; color: #666; }
+  .vault-box .status { font-size: 0.75rem; margin-top: 4px; font-weight: 600; transition: color 0.3s; }
+  .vault-box .status.pending { color: #555; }
+  .vault-box .status.granted { color: #61ffb4; }
+  .vault-box .status.denied { color: #ff6161; }
+
+  /* Bridge line */
+  .bridge-line {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 320px; height: 80px; pointer-events: none;
+  }
+  .bridge-svg { width: 100%; height: 100%; }
+
+  /* Packet animation */
+  .packet {
+    position: absolute; width: 36px; height: 36px; border-radius: 50%;
+    background: radial-gradient(circle, #7b61ff, #00d4ff);
+    box-shadow: 0 0 20px #7b61ff88, 0 0 40px #00d4ff44;
+    opacity: 0; transition: none; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: #fff; font-weight: 700;
+  }
+
+  /* DVN verification indicators */
+  .dvn-strip {
+    position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; opacity: 0; transition: opacity 0.3s;
+  }
+  .dvn-strip.visible { opacity: 1; }
+  .dvn {
+    width: 28px; height: 28px; border-radius: 50%; border: 2px solid #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.5rem; font-weight: 700; color: #555; transition: all 0.4s;
+  }
+  .dvn.verified { border-color: #61ffb4; color: #61ffb4; background: #61ffb411; }
+
+  /* Verify check animation */
+  .verify-badge {
+    position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
+    border-radius: 50%; background: #61ffb4; color: #0a0a0f; font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center; font-weight: 700;
+    opacity: 0; transform: scale(0); transition: all 0.3s;
+  }
+  .verify-badge.show { opacity: 1; transform: scale(1); }
+
+  /* ===== CONTROLS ===== */
+  .controls { text-align: center; padding: 10px 20px 40px; }
+  .play-btn {
+    padding: 12px 36px; border-radius: 10px; border: 1px solid #7b61ff;
+    background: #7b61ff22; color: #7b61ff; font-size: 0.9rem; cursor: pointer;
+    font-weight: 600; transition: all 0.2s; letter-spacing: 1px;
+  }
+  .play-btn:hover { background: #7b61ff44; }
+  .play-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .step-indicator {
+    margin-top: 16px; font-size: 0.8rem; color: #555; min-height: 24px;
+    transition: color 0.3s;
+  }
+  .step-indicator.active { color: #aaa; }
+
+  /* ===== EXPLANATION CARDS ===== */
+  .explain { max-width: 800px; margin: 20px auto 60px; padding: 0 20px; }
+  .explain h2 { font-size: 1.4rem; margin-bottom: 24px; text-align: center; color: #fff; }
+
+  .ex-card {
+    display: flex; gap: 20px; align-items: flex-start; padding: 20px;
+    background: #12121a; border: 1px solid #1a1a2a; border-radius: 12px;
+    margin: 14px 0; transition: border-color 0.3s;
+  }
+  .ex-card:hover { border-color: #333; }
+  .ex-icon {
+    min-width: 48px; height: 48px; border-radius: 12px; display: flex;
+    align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;
+  }
+  .ex-card:nth-child(1) .ex-icon { background: #7b61ff22; }
+  .ex-card:nth-child(2) .ex-icon { background: #00d4ff22; }
+  .ex-card:nth-child(3) .ex-icon { background: #61ffb422; }
+  .ex-card:nth-child(4) .ex-icon { background: #ffd76122; }
+  .ex-card:nth-child(5) .ex-icon { background: #ff616122; }
+
+  .ex-body h3 { font-size: 0.95rem; color: #fff; margin-bottom: 6px; }
+  .ex-body p { font-size: 0.82rem; color: #777; line-height: 1.5; }
+  .ex-body code { background: #1a1a2e; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: #7b61ff; }
+
+  /* ===== TRUST CHAIN ===== */
+  .trust { max-width: 800px; margin: 0 auto 60px; padding: 0 20px; }
+  .trust h2 { font-size: 1.4rem; margin-bottom: 24px; text-align: center; color: #fff; }
+
+  .trust-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    margin: 6px 0; border-radius: 10px; background: #12121a; border: 1px solid #1a1a2a;
+  }
+  .trust-q { font-size: 0.8rem; color: #aaa; flex: 1; }
+  .trust-a { font-size: 0.75rem; color: #61ffb4; font-weight: 600; white-space: nowrap; }
+  .trust-why { font-size: 0.7rem; color: #555; margin-left: 4px; }
+
+  /* ===== FRESHNESS ===== */
+  .freshness { max-width: 800px; margin: 0 auto 60px; padding: 0 20px; }
+  .freshness h2 { font-size: 1.4rem; margin-bottom: 16px; text-align: center; color: #fff; }
+  .freshness > p { text-align: center; color: #666; font-size: 0.85rem; margin-bottom: 24px; }
+
+  .fresh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .fresh-card {
+    background: #12121a; border: 1px solid #1a1a2a; border-radius: 12px; padding: 18px;
+    text-align: center;
+  }
+  .fresh-card .scenario { font-size: 0.85rem; color: #fff; font-weight: 600; }
+  .fresh-card .max-age { font-size: 1.5rem; font-weight: 700; margin: 8px 0; }
+  .fresh-card:nth-child(1) .max-age { color: #ff6161; }
+  .fresh-card:nth-child(2) .max-age { color: #ffd761; }
+  .fresh-card:nth-child(3) .max-age { color: #61ffb4; }
+  .fresh-card .desc { font-size: 0.75rem; color: #555; }
+
+  @media (max-width: 860px) {
+    .scene { height: 820px; }
+    .chain { position: relative; left: auto !important; right: auto !important; top: auto; width: 100%; max-width: 320px; margin: 0 auto 16px; }
+    .bridge-line { display: none; }
+    .dvn-strip { position: relative; top: auto; left: auto; transform: none; justify-content: center; margin: 16px 0; }
+    .packet { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>How It Works</h1>
+  <p>Bridge once. Verify forever.</p>
+  <div class="subtitle">Click play to watch the full bridge + verification flow</div>
+</div>
+
+<!-- ===== ANIMATED SCENE ===== -->
+<div class="scene" id="scene">
+  <!-- Base chain -->
+  <div class="chain base" id="chain-base">
+    <div class="chain-title">Base (Source of Truth)</div>
+    <div class="agent-card" id="agent-card">
+      <div class="name">Agent #42</div>
+      <div class="detail">Owner: 0x7b61...ff00</div>
+      <div class="rep-bar"><div class="rep-fill" id="rep-fill" style="width: 0%"></div></div>
+      <div class="rep-label" id="rep-label">Reputation: --</div>
+    </div>
+    <div class="agent-card" style="opacity: 0.3;">
+      <div class="name" style="color: #555;">Identity Registry</div>
+      <div class="detail">ERC-721 NFT #42 minted</div>
+    </div>
+    <div class="agent-card" style="opacity: 0.3;">
+      <div class="name" style="color: #555;">Reputation Registry</div>
+      <div class="detail">12 feedback entries</div>
+    </div>
+  </div>
+
+  <!-- DVN strip -->
+  <div class="dvn-strip" id="dvn-strip">
+    <div class="dvn" id="dvn1">D1</div>
+    <div class="dvn" id="dvn2">D2</div>
+    <div class="dvn" id="dvn3">D3</div>
+  </div>
+
+  <!-- Bridge line -->
+  <div class="bridge-line">
+    <svg class="bridge-svg" viewBox="0 0 320 80">
+      <defs>
+        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#7b61ff" stop-opacity="0.3"/>
+          <stop offset="50%" stop-color="#7b61ff" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#00d4ff" stop-opacity="0.3"/>
+        </linearGradient>
+      </defs>
+      <path d="M 0 40 Q 160 0 320 40" fill="none" stroke="url(#lineGrad)" stroke-width="2" stroke-dasharray="6 4" id="bridge-path"/>
+    </svg>
+  </div>
+
+  <!-- Packet -->
+  <div class="packet" id="packet">ID</div>
+
+  <!-- Destination chain -->
+  <div class="chain dest" id="chain-dest">
+    <div class="chain-title">Arbitrum (Destination)</div>
+    <div class="cache-slot empty" id="cache-slot">
+      Awaiting bridged identity...
+    </div>
+    <div class="vault-box" id="vault-box">
+      <div class="label">ReputationGatedVault (min: 50)</div>
+      <div class="status pending" id="vault-status">Waiting for verification...</div>
+    </div>
+    <div style="position: relative; display: inline-block;">
+      <div class="verify-badge" id="verify-badge">&#10003;</div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="play-btn" id="play-btn" onclick="runAnimation()">PLAY ANIMATION</button>
+  <div class="step-indicator" id="step-text">&nbsp;</div>
+</div>
+
+<!-- ===== EXPLANATION ===== -->
+<div class="explain">
+  <h2>The Two-Step Flow</h2>
+
+  <div class="ex-card">
+    <div class="ex-icon">1</div>
+    <div class="ex-body">
+      <h3>Agent registers on Base</h3>
+      <p>Mints an ERC-721 identity NFT via <code>register(agentURI)</code>. The URI points to a JSON file describing the agent's capabilities, services, and endpoints.</p>
+    </div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-icon">2</div>
+    <div class="ex-body">
+      <h3>Reputation accumulates</h3>
+      <p>Other agents and users submit feedback via <code>giveFeedback(agentId, score)</code>. Scores are aggregated on-chain into an average reputation.</p>
+    </div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-icon">3</div>
+    <div class="ex-body">
+      <h3>Bridge identity (one-time)</h3>
+      <p>Agent calls <code>bridgeIdentity(agentId, dstEid)</code>. The contract reads both registries, encodes the snapshot, and sends it via LayerZero. DVNs independently verify the message. ~30 seconds.</p>
+    </div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-icon">4</div>
+    <div class="ex-body">
+      <h3>Verify forever (any contract)</h3>
+      <p>Any contract on the destination chain can call <code>verifyAgent(address)</code> or <code>isReputable(address, minScore)</code> to check the agent's identity and reputation. No further action needed from the agent.</p>
+    </div>
+  </div>
+
+  <div class="ex-card">
+    <div class="ex-icon">5</div>
+    <div class="ex-body">
+      <h3>Re-bridge to refresh</h3>
+      <p>If reputation changes on Base, the agent bridges again to update the cached data. Each bridge includes a <code>bridgedAt</code> timestamp so consumers can check freshness.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DATA FRESHNESS ===== -->
+<div class="freshness">
+  <h2>Data Freshness — The Consumer Decides</h2>
+  <p>Every bridged identity includes a <code>bridgedAt</code> timestamp. Consuming contracts choose their own freshness requirements.</p>
+
+  <div class="fresh-grid">
+    <div class="fresh-card">
+      <div class="scenario">High-Stakes Vault</div>
+      <div class="max-age">&lt; 1 hour</div>
+      <div class="desc">Large deposits require very recent identity data. Agent re-bridges frequently.</div>
+    </div>
+    <div class="fresh-card">
+      <div class="scenario">Agent Marketplace</div>
+      <div class="max-age">&lt; 24 hours</div>
+      <div class="desc">Service discovery accepts day-old reputation. Good enough for most interactions.</div>
+    </div>
+    <div class="fresh-card">
+      <div class="scenario">Access Gate</div>
+      <div class="max-age">Any age</div>
+      <div class="desc">Just needs to know the agent exists and has some reputation. Bridge once, access forever.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TRUST CHAIN ===== -->
+<div class="trust">
+  <h2>Trust Chain</h2>
+
+  <div class="trust-row">
+    <div class="trust-q">Was it sent by the real AgentBridge on Base?</div>
+    <div class="trust-a">YES</div>
+    <div class="trust-why">— peer validation (setPeer)</div>
+  </div>
+  <div class="trust-row">
+    <div class="trust-q">Was the message actually sent on Base, not forged?</div>
+    <div class="trust-a">YES</div>
+    <div class="trust-why">— DVN consensus</div>
+  </div>
+  <div class="trust-row">
+    <div class="trust-q">Was the data accurate at time of bridging?</div>
+    <div class="trust-a">YES</div>
+    <div class="trust-why">— reads on-chain registries directly</div>
+  </div>
+  <div class="trust-row">
+    <div class="trust-q">Could someone bridge a fake identity?</div>
+    <div class="trust-a">NO</div>
+    <div class="trust-why">— ownerOf check enforced</div>
+  </div>
+  <div class="trust-row">
+    <div class="trust-q">Could someone tamper with the message in transit?</div>
+    <div class="trust-a">NO</div>
+    <div class="trust-why">— packet hashing + nonce ordering</div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let animating = false;
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setStep(text) {
+  const el = $('step-text');
+  el.textContent = text;
+  el.className = 'step-indicator active';
+}
+
+async function runAnimation() {
+  if (animating) return;
+  animating = true;
+  $('play-btn').disabled = true;
+  $('play-btn').textContent = 'RUNNING...';
+
+  // Reset
+  $('rep-fill').style.width = '0%';
+  $('rep-label').textContent = 'Reputation: --';
+  $('cache-slot').className = 'cache-slot empty';
+  $('cache-slot').innerHTML = 'Awaiting bridged identity...';
+  $('vault-status').className = 'status pending';
+  $('vault-status').textContent = 'Waiting for verification...';
+  $('dvn-strip').className = 'dvn-strip';
+  $('dvn1').className = 'dvn';
+  $('dvn2').className = 'dvn';
+  $('dvn3').className = 'dvn';
+  $('verify-badge').className = 'verify-badge';
+  $('packet').style.opacity = '0';
+  await sleep(500);
+
+  // Step 1: Reputation builds
+  setStep('Step 1: Agent #42 accumulates reputation on Base...');
+  await sleep(600);
+  $('rep-fill').style.width = '40%';
+  $('rep-label').textContent = 'Reputation: 40 (2 reviews)';
+  await sleep(800);
+  $('rep-fill').style.width = '65%';
+  $('rep-label').textContent = 'Reputation: 65 (6 reviews)';
+  await sleep(800);
+  $('rep-fill').style.width = '85%';
+  $('rep-label').textContent = 'Reputation: 85 (12 reviews)';
+  await sleep(1000);
+
+  // Step 2: Bridge initiated
+  setStep('Step 2: Agent calls bridgeIdentity() — reading registries...');
+  $('chain-base').classList.add('active');
+  await sleep(1200);
+
+  // Step 3: Packet animation
+  setStep('Step 3: Payload encoded, sent via LayerZero...');
+  const packet = $('packet');
+  const scene = $('scene');
+  const sceneRect = scene.getBoundingClientRect();
+  const baseRect = $('chain-base').getBoundingClientRect();
+  const destRect = $('chain-dest').getBoundingClientRect();
+
+  // Start position (right edge of Base chain)
+  const startX = baseRect.right - sceneRect.left;
+  const startY = baseRect.top - sceneRect.top + baseRect.height / 2;
+  const endX = destRect.left - sceneRect.left - 20;
+  const endY = destRect.top - sceneRect.top + destRect.height / 2;
+
+  packet.style.left = startX + 'px';
+  packet.style.top = startY + 'px';
+  packet.style.opacity = '1';
+  packet.style.transition = 'none';
+  await sleep(50);
+
+  // Animate across with arc
+  const midX = (startX + endX) / 2;
+  const midY = Math.min(startY, endY) - 60;
+
+  // Phase 1: to middle (DVN zone)
+  packet.style.transition = 'left 0.8s ease-in-out, top 0.8s ease-in-out';
+  packet.style.left = midX + 'px';
+  packet.style.top = midY + 'px';
+  await sleep(900);
+
+  // DVNs verify
+  setStep('Step 4: DVNs independently verify the message...');
+  $('dvn-strip').className = 'dvn-strip visible';
+  await sleep(500);
+  $('dvn1').className = 'dvn verified';
+  await sleep(400);
+  $('dvn2').className = 'dvn verified';
+  await sleep(400);
+  $('dvn3').className = 'dvn verified';
+  await sleep(600);
+
+  // Phase 2: to destination
+  setStep('Step 5: Verified! Delivering to Arbitrum...');
+  packet.style.transition = 'left 0.8s ease-in-out, top 0.8s ease-in-out, opacity 0.3s';
+  packet.style.left = endX + 'px';
+  packet.style.top = endY + 'px';
+  await sleep(900);
+  packet.style.opacity = '0';
+  await sleep(300);
+
+  // Step 5: Cache filled
+  setStep('Step 6: Identity cached on Arbitrum — _lzReceive() executed');
+  $('chain-dest').classList.add('active');
+  $('cache-slot').className = 'cache-slot filled';
+  $('cache-slot').innerHTML = `
+    <div class="name">Agent #42</div>
+    <div class="detail">Owner: 0x7b61...ff00 &nbsp; Rep: 85/100 &nbsp; Reviews: 12</div>
+    <div class="timestamp">Bridged at: ${new Date().toISOString().split('.')[0]}Z</div>
+  `;
+  await sleep(1500);
+
+  // Step 6: Vault verification
+  setStep('Step 7: ReputationGatedVault calls verifyAgent() → (true, 85)');
+  await sleep(800);
+  $('vault-status').className = 'status granted';
+  $('vault-status').textContent = 'ACCESS GRANTED — rep 85 >= min 50';
+  $('verify-badge').className = 'verify-badge show';
+  await sleep(1500);
+
+  setStep('Done! Agent bridged once, now verified on Arbitrum forever.');
+  $('chain-base').classList.remove('active');
+  $('chain-dest').classList.remove('active');
+
+  await sleep(2000);
+  $('play-btn').disabled = false;
+  $('play-btn').textContent = 'REPLAY';
+  animating = false;
+}
+</script>
+</body>
+</html>
