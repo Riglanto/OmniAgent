@@ -1,10 +1,23 @@
 # OmniAgent
 
-Cross-chain agent identity bridge powered by ERC-8004 × LayerZero V2. Bridge once. Verify forever.
+<p align="center">
+  <img src="docs/banner.svg" alt="OmniAgent — Cross-Chain Agent Identity Bridge" width="100%"/>
+</p>
+
+<p align="center">
+  <strong>21 tests passing</strong> · <strong>6 contracts verified</strong> · <strong>Deployed on Base Sepolia + Arbitrum Sepolia</strong>
+</p>
+
+<p align="center">
+  <a href="https://testnet.layerzeroscan.com/tx/0x89f70943d58990a2925637d23e9dfbe0ee4e97ddd7d72572d30b7ff726ba63e5">LayerZero Scan</a> ·
+  <a href="https://sepolia.basescan.org/tx/0x89f70943d58990a2925637d23e9dfbe0ee4e97ddd7d72572d30b7ff726ba63e5">Basescan</a> ·
+  <a href="docs/architecture.html">Interactive Architecture</a> ·
+  <a href="docs/how-it-works.html">Animated Flow</a>
+</p>
+
+---
 
 Agents registered on Base can cryptographically prove their identity, reputation, and validation status on Arbitrum, Optimism, and any LayerZero-supported chain.
-
-**[Interactive Architecture →](docs/architecture.html)** | **[Animated Flow (How It Works) →](docs/how-it-works.html)** | **[GitHub →](https://github.com/Riglanto/OmniAgent)**
 
 ## Why
 
@@ -138,11 +151,35 @@ The agent also produces a structured `conversationLog` (JSON) for hackathon subm
 
 | Contract | Chain | Purpose |
 |----------|-------|---------|
-| `AgentBridge.sol` | Base | Reads ERC-8004 registries, bridges identity cross-chain via `_lzSend`. Supports `bridgeToAll()` for multi-chain batch bridging. |
-| `AgentBridgeReceiver.sol` | Arb/OP/etc | Caches bridged identities, exposes `verifyAgent` / `isReputable` / `isReputableFresh` API |
+| `AgentBridge.sol` | Base | Reads all 3 ERC-8004 registries, bridges identity cross-chain via `_lzSend`. Supports `bridgeToAll()` for multi-chain batch bridging. |
+| `AgentBridgeReceiver.sol` | Arb/OP/etc | Caches bridged identities, exposes `verifyAgent` / `isReputableFresh` / `isVerifiedAgent` / `verifyAgentFull` API |
 | `ReputationGatedVault.sol` | Arb/OP/etc | Demo: ETH vault that only accepts deposits from verified, reputable agents |
-| `MockIdentityRegistry.sol` | Testnet | ERC-721 based identity registry (ERC-8004 mock) |
-| `MockReputationRegistry.sol` | Testnet | Feedback-based reputation (ERC-8004 mock) |
+| `MockIdentityRegistry.sol` | Testnet | ERC-721 based identity registry (ERC-8004) |
+| `MockReputationRegistry.sol` | Testnet | Feedback-based reputation (ERC-8004) |
+| `MockValidationRegistry.sol` | Testnet | Request/response validation with scores (ERC-8004) |
+
+## Deployed Contracts (Testnet)
+
+**Base Sepolia:**
+
+| Contract | Address |
+|----------|---------|
+| MockIdentityRegistry | [`0x51a07E8f24c8704e5e76ed0A76Cc68096536edbb`](https://sepolia.basescan.org/address/0x51a07E8f24c8704e5e76ed0A76Cc68096536edbb) |
+| MockReputationRegistry | [`0x070425B1d977e4871fc7A3841E6382Db8560a360`](https://sepolia.basescan.org/address/0x070425B1d977e4871fc7A3841E6382Db8560a360) |
+| MockValidationRegistry | [`0x4B7A3D7D0D2Fce8A25C5fAEd3204aa471f8fE06b`](https://sepolia.basescan.org/address/0x4B7A3D7D0D2Fce8A25C5fAEd3204aa471f8fE06b) |
+| AgentBridge | [`0x83A543C32Bda488b51C29b31ccA490cD6F7d5CdD`](https://sepolia.basescan.org/address/0x83A543C32Bda488b51C29b31ccA490cD6F7d5CdD) |
+
+**Arbitrum Sepolia:**
+
+| Contract | Address |
+|----------|---------|
+| AgentBridgeReceiver | [`0xEC50f64bAC775bF6b614D1E51E8B8daf7dcE41e2`](https://sepolia.arbiscan.io/address/0xEC50f64bAC775bF6b614D1E51E8B8daf7dcE41e2) |
+| ReputationGatedVault | [`0xa69EEb57203C2526772603c9B3C1c8FFF6fA4BDE`](https://sepolia.arbiscan.io/address/0xa69EEb57203C2526772603c9B3C1c8FFF6fA4BDE) |
+
+**Verified Cross-Chain Bridge Transaction:**
+
+- [LayerZero Scan](https://testnet.layerzeroscan.com/tx/0x89f70943d58990a2925637d23e9dfbe0ee4e97ddd7d72572d30b7ff726ba63e5) — Base Sepolia → Arbitrum Sepolia
+- [Basescan](https://sepolia.basescan.org/tx/0x89f70943d58990a2925637d23e9dfbe0ee4e97ddd7d72572d30b7ff726ba63e5) — Source transaction
 
 ## Quick Start
 
@@ -153,22 +190,14 @@ npm install --legacy-peer-deps
 # Compile
 npx hardhat compile
 
-# Test (17 tests)
+# Test (21 tests)
 npx hardhat test
 
 # Run autonomous agent demo
 npx hardhat run agent/bridge-agent.ts
 
-# Deploy to testnets
-npx hardhat deploy --network base-sepolia --tags Registries,Bridge
-npx hardhat deploy --network arbitrum-sepolia --tags Receiver
-
-# Wire peers
-BRIDGE_ADDR=0x... RECEIVER_ADDR=0x... DEST_EID=40231 \
-  npx hardhat run scripts/wire-peers.ts --network base-sepolia
-
-SOURCE_EID=40245 BRIDGE_ADDR=0x... RECEIVER_ADDR=0x... \
-  npx hardhat run scripts/wire-peers.ts --network arbitrum-sepolia
+# Execute real testnet bridge
+npx hardhat run scripts/testnet-bridge.ts --network base-sepolia
 ```
 
 ## LayerZero Endpoint IDs
@@ -184,7 +213,7 @@ SOURCE_EID=40245 BRIDGE_ADDR=0x... RECEIVER_ADDR=0x... \
 
 Built for **The Synthesis** hackathon. Target tracks:
 - **Agents With Receipts — ERC-8004** (Protocol Labs)
-- **Agent Services on Base** (Base)
+- **Let the Agent Cook** (Protocol Labs)
 - **Synthesis Open Track** (Community)
 
 ## License

@@ -41,13 +41,15 @@ async function deployBase(deployer: any) {
 
   const identityAddr = await deployContract("MockIdentityRegistry", [], deployer);
   const reputationAddr = await deployContract("MockReputationRegistry", [], deployer);
+  const validationAddr = await deployContract("MockValidationRegistry", [], deployer);
   const bridgeAddr = await deployContract("AgentBridge", [
-    LZ_ENDPOINT_TESTNET, deployer.address, identityAddr, reputationAddr
+    LZ_ENDPOINT_TESTNET, deployer.address, identityAddr, reputationAddr, validationAddr
   ], deployer);
 
   console.log("\n=== Base Sepolia deployment complete ===");
   console.log(`\n  IDENTITY_REG=${identityAddr}`);
   console.log(`  REPUTATION_REG=${reputationAddr}`);
+  console.log(`  VALIDATION_REG=${validationAddr}`);
   console.log(`  BRIDGE_ADDR=${bridgeAddr}`);
 }
 

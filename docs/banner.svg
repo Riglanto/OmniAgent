@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#0f0f2e"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00d4ff"/>
+      <stop offset="100%" stop-color="#67e8f9"/>
+    </linearGradient>
+    <linearGradient id="bridge" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7b61ff"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#00d4ff"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-strong">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes packet {
+      0% { transform: translate(195px, 105px); opacity: 0; }
+      10% { opacity: 1; }
+      50% { transform: translate(400px, 75px); opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translate(575px, 105px); opacity: 0; }
+    }
+    @keyframes pulse-base {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+    @keyframes pulse-arb {
+      0%, 40% { opacity: 0.4; }
+      60%, 80% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+    @keyframes dash {
+      to { stroke-dashoffset: -20; }
+    }
+    @keyframes dvn1 { 0%, 30% { fill: #333; } 35%, 100% { fill: #61ffb4; } }
+    @keyframes dvn2 { 0%, 40% { fill: #333; } 45%, 100% { fill: #61ffb4; } }
+    @keyframes dvn3 { 0%, 50% { fill: #333; } 55%, 100% { fill: #61ffb4; } }
+    @keyframes title-glow {
+      0%, 100% { filter: url(#glow); }
+      50% { filter: url(#glow-strong); }
+    }
+    .packet { animation: packet 3s ease-in-out infinite; }
+    .base-glow { animation: pulse-base 3s ease-in-out infinite; }
+    .arb-glow { animation: pulse-arb 3s ease-in-out infinite; }
+    .bridge-dash { animation: dash 1s linear infinite; }
+    .dvn1 { animation: dvn1 3s ease-in-out infinite; }
+    .dvn2 { animation: dvn2 3s ease-in-out infinite; }
+    .dvn3 { animation: dvn3 3s ease-in-out infinite; }
+    .title { animation: title-glow 4s ease-in-out infinite; }
+  </style>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="url(#bg)" rx="12"/>
+
+  <!-- Title -->
+  <text x="400" y="32" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="700" fill="url(#bridge)" class="title">OmniAgent</text>
+  <text x="400" y="50" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#666">Cross-Chain Agent Identity Bridge — ERC-8004 × LayerZero V2</text>
+
+  <!-- Base chain box -->
+  <rect x="40" y="70" width="170" height="110" rx="10" fill="#12121a" stroke="#7b61ff" stroke-width="1.5" class="base-glow"/>
+  <text x="125" y="90" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#7b61ff" font-weight="600" letter-spacing="1.5">BASE</text>
+  <rect x="55" y="100" width="140" height="24" rx="5" fill="#1a1a2e"/>
+  <text x="125" y="116" text-anchor="middle" font-family="monospace" font-size="9" fill="#aaa">Identity Registry</text>
+  <rect x="55" y="130" width="140" height="24" rx="5" fill="#1a1a2e"/>
+  <text x="125" y="146" text-anchor="middle" font-family="monospace" font-size="9" fill="#aaa">Reputation Registry</text>
+  <rect x="55" y="160" width="140" height="12" rx="3" fill="#1a1a2e"/>
+  <text x="125" y="170" text-anchor="middle" font-family="monospace" font-size="7" fill="#666">AgentBridge (OApp)</text>
+
+  <!-- Bridge line -->
+  <path d="M 220 125 Q 400 65 580 125" fill="none" stroke="url(#bridge)" stroke-width="1.5" stroke-dasharray="6 4" class="bridge-dash" opacity="0.5"/>
+
+  <!-- DVN indicators -->
+  <circle cx="370" cy="85" r="10" class="dvn1" opacity="0.8"/>
+  <text x="370" y="89" text-anchor="middle" font-family="monospace" font-size="7" fill="#0a0a1a" font-weight="700">D1</text>
+  <circle cx="400" cy="78" r="10" class="dvn2" opacity="0.8"/>
+  <text x="400" y="82" text-anchor="middle" font-family="monospace" font-size="7" fill="#0a0a1a" font-weight="700">D2</text>
+  <circle cx="430" cy="85" r="10" class="dvn3" opacity="0.8"/>
+  <text x="430" y="89" text-anchor="middle" font-family="monospace" font-size="7" fill="#0a0a1a" font-weight="700">D3</text>
+  <text x="400" y="108" text-anchor="middle" font-family="system-ui, sans-serif" font-size="8" fill="#555">LayerZero DVNs</text>
+
+  <!-- Packet -->
+  <g class="packet">
+    <circle cx="0" cy="0" r="8" fill="url(#bridge)" filter="url(#glow)"/>
+    <text x="0" y="3" text-anchor="middle" font-family="monospace" font-size="6" fill="#fff" font-weight="700">ID</text>
+  </g>
+
+  <!-- Arbitrum chain box -->
+  <rect x="590" y="70" width="170" height="110" rx="10" fill="#12121a" stroke="#00d4ff" stroke-width="1.5" class="arb-glow"/>
+  <text x="675" y="90" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#00d4ff" font-weight="600" letter-spacing="1.5">ARBITRUM</text>
+  <rect x="605" y="100" width="140" height="24" rx="5" fill="#1a1a2e"/>
+  <text x="675" y="116" text-anchor="middle" font-family="monospace" font-size="9" fill="#aaa">Cached Identity</text>
+  <rect x="605" y="130" width="140" height="24" rx="5" fill="#1a1a2e"/>
+  <text x="675" y="146" text-anchor="middle" font-family="monospace" font-size="9" fill="#aaa">verifyAgent() ✓</text>
+  <rect x="605" y="160" width="140" height="12" rx="3" fill="#1a1a2e"/>
+  <text x="675" y="170" text-anchor="middle" font-family="monospace" font-size="7" fill="#666">Receiver (OApp)</text>
+
+  <!-- Bottom tagline -->
+  <text x="400" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#444">Bridge once. Verify forever.</text>
+</svg>
