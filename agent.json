@@ -1,0 +1,90 @@
+{
+  "name": "OmniAgent",
+  "description": "Self-sovereign bridge agent that monitors ERC-8004 registrations and bridges qualified agent identities cross-chain via LayerZero V2. Implements full discover→analyze→decide→execute→verify autonomy loop with adaptive thresholds and market-driven decisions.",
+  "version": "1.0.0",
+  "operator": {
+    "wallet": "0x2e5fEA809Cc4679DdEc0c6cEB5F9f5B34Ce6263F",
+    "name": "Radoslaw Iglantowicz"
+  },
+  "identity": {
+    "erc8004": {
+      "registrationTx": "https://basescan.org/tx/0x8b7ead53d664c1b48147c7ee6c271a78ab6a28b9040148410bcfc5e4d788c6c4",
+      "agentId": 35862,
+      "chain": "Base Mainnet",
+      "selfCustodyTx": "https://basescan.org/tx/0x8af4d0e5f4a1b41c666a42869e1908fb37504b13e3dc1d82daee5b07a67c3d88"
+    }
+  },
+  "tools": [
+    {
+      "name": "ERC-8004 Identity Registry",
+      "type": "smart-contract",
+      "description": "Reads agent identity NFTs (ownerOf, tokenURI, metadata)",
+      "address": "0x51a07E8f24c8704e5e76ed0A76Cc68096536edbb",
+      "chain": "Base Sepolia"
+    },
+    {
+      "name": "ERC-8004 Reputation Registry",
+      "type": "smart-contract",
+      "description": "Reads agent reputation feedback (getSummary, giveFeedback)",
+      "address": "0x070425B1d977e4871fc7A3841E6382Db8560a360",
+      "chain": "Base Sepolia"
+    },
+    {
+      "name": "ERC-8004 Validation Registry",
+      "type": "smart-contract",
+      "description": "Reads agent validation scores (validationRequest, validationResponse)",
+      "address": "0x4B7A3D7D0D2Fce8A25C5fAEd3204aa471f8fE06b",
+      "chain": "Base Sepolia"
+    },
+    {
+      "name": "AgentBridge (LayerZero OApp)",
+      "type": "smart-contract",
+      "description": "Bridges agent identity cross-chain via LayerZero V2 (bridgeIdentity, bridgeToAll)",
+      "address": "0x83A543C32Bda488b51C29b31ccA490cD6F7d5CdD",
+      "chain": "Base Sepolia"
+    },
+    {
+      "name": "AgentBridgeReceiver (LayerZero OApp)",
+      "type": "smart-contract",
+      "description": "Caches bridged identities, exposes verifyAgent/isReputableFresh/isVerifiedAgent",
+      "address": "0xEC50f64bAC775bF6b614D1E51E8B8daf7dcE41e2",
+      "chain": "Arbitrum Sepolia"
+    }
+  ],
+  "techStack": {
+    "language": "TypeScript + Solidity",
+    "framework": "Hardhat",
+    "crossChain": "LayerZero V2 OApp",
+    "contracts": "OpenZeppelin v5",
+    "harness": "claude-code",
+    "model": "claude-opus-4-6"
+  },
+  "capabilities": {
+    "autonomousExecution": true,
+    "decisionLoop": ["discover", "analyze", "decide", "execute", "verify"],
+    "selfBootstrap": true,
+    "eventDriven": true,
+    "adaptiveThresholds": true,
+    "gasManagement": true,
+    "multiChainBridging": true
+  },
+  "computeConstraints": {
+    "minGasBalance": "0.001 ETH",
+    "pollInterval": "event-driven (30s fallback for pending agents)",
+    "maxBatchSize": "unlimited (constrained by gas)"
+  },
+  "taskCategories": [
+    "identity-bridging",
+    "reputation-analysis",
+    "cross-chain-messaging",
+    "agent-verification",
+    "registry-monitoring"
+  ],
+  "safety": {
+    "ownershipVerification": "Only agent NFT owner can trigger bridge",
+    "peerValidation": "LayerZero DVN consensus + setPeer whitelist",
+    "reputationThreshold": "Configurable minimum (default 50)",
+    "gasGuard": "Pauses operations when balance below threshold",
+    "adaptiveThreshold": "Raises threshold after failures, lowers after sustained success"
+  }
+}
