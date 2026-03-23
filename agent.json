@@ -61,10 +61,13 @@
   },
   "capabilities": {
     "autonomousExecution": true,
-    "decisionLoop": ["discover", "analyze", "decide", "execute", "verify"],
+    "decisionLoop": ["discover", "analyze", "plan", "decide", "execute", "verify"],
     "selfBootstrap": true,
     "eventDriven": true,
     "adaptiveThresholds": true,
+    "trustGating": true,
+    "postBridgeReputation": true,
+    "computeBudgetTracking": true,
     "gasManagement": true,
     "multiChainBridging": true
   },

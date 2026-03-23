@@ -26,6 +26,7 @@ import { ethers } from "hardhat";
 interface AgentConfig {
   identityRegistryAddr: string;
   reputationRegistryAddr: string;
+  validationRegistryAddr: string;
   bridgeAddr: string;
   destEids: number[];
   minReputation: number;
@@ -42,6 +43,7 @@ function loadConfig(): AgentConfig {
   return {
     identityRegistryAddr: required("IDENTITY_REG"),
     reputationRegistryAddr: required("REPUTATION_REG"),
+    validationRegistryAddr: process.env.VALIDATION_REG || "",
     bridgeAddr: required("BRIDGE_ADDR"),
     destEids: required("DEST_EIDS").split(",").map(Number),
     minReputation: parseInt(process.env.MIN_REPUTATION || "50"),
@@ -81,6 +83,9 @@ function log(phase: string, message: string, agentId?: number, data?: Record<str
     execute:   "🚀 EXECUTE  ",
     verify:    "✅ VERIFY   ",
     listen:    "👂 LISTEN   ",
+    plan:      "📐 PLAN     ",
+    trust:     "🤝 TRUST    ",
+    budget:    "📊 BUDGET   ",
     health:    "💊 HEALTH   ",
     adapt:     "🔄 ADAPT    ",
     info:      "ℹ️  INFO    ",
@@ -115,6 +120,7 @@ interface AgentState {
   startingBalance: bigint;
   gasSpent: bigint;
   paused: boolean;
+  computeBudget: { agentId: number; gasCost: bigint }[];
 }
 
 const state: AgentState = {
@@ -129,6 +135,7 @@ const state: AgentState = {
   startingBalance: 0n,
   gasSpent: 0n,
   paused: false,
+  computeBudget: [],
 };
 
 // ============================================================
@@ -275,6 +282,9 @@ async function runEventDrivenAgent(config: AgentConfig) {
   const identity = await ethers.getContractAt("MockIdentityRegistry", config.identityRegistryAddr);
   const reputation = await ethers.getContractAt("MockReputationRegistry", config.reputationRegistryAddr);
   const bridge = await ethers.getContractAt("AgentBridge", config.bridgeAddr);
+  const validation = config.validationRegistryAddr
+    ? await ethers.getContractAt("MockValidationRegistry", config.validationRegistryAddr)
+    : undefined;
 
   // ── Phase 0: Bootstrap self ──
   await bootstrapSelf(signer, identity, reputation);
@@ -291,7 +301,7 @@ async function runEventDrivenAgent(config: AgentConfig) {
   for (const event of pastMints) {
     const agentId = Number(event.args[2]);
     if (agentId === state.selfAgentId) continue; // Don't bridge ourselves
-    await processAgent(agentId, identity, reputation, bridge, config, signer);
+    await processAgent(agentId, identity, reputation, bridge, config, signer, validation);
   }
   printSummary();
 
@@ -307,7 +317,7 @@ async function runEventDrivenAgent(config: AgentConfig) {
     }
     console.log(`\n${"═".repeat(60)}`);
     log("discover", `New agent registered!`, agentId);
-    await processAgent(agentId, identity, reputation, bridge, config, signer);
+    await processAgent(agentId, identity, reputation, bridge, config, signer, validation);
     printSummary();
   });
 
@@ -327,7 +337,7 @@ async function runEventDrivenAgent(config: AgentConfig) {
           console.log(`\n${"═".repeat(60)}`);
           log("discover", `Pending agent now meets threshold!`, agentId, { repAvg, repCount });
           state.pendingAgents.delete(agentId);
-          await processAgent(agentId, identity, reputation, bridge, config, signer);
+          await processAgent(agentId, identity, reputation, bridge, config, signer, validation);
           printSummary();
         }
       } catch (err: any) {
@@ -351,15 +361,17 @@ async function runEventDrivenAgent(config: AgentConfig) {
 
 async function processAgent(
   agentId: number, identity: any, reputation: any, bridge: any,
-  config: AgentConfig, signer: any
+  config: AgentConfig, signer: any, validation?: any
 ) {
   if (state.processedAgents.has(agentId)) return;
 
-  try {
-    // ANALYZE
-    const analysis = await analyzeAgent(identity, reputation, agentId);
+  const balanceBefore = await ethers.provider.getBalance(signer.address);
 
-    // DECIDE (with adaptive threshold)
+  try {
+    // ── ANALYZE (read all 3 registries) ──
+    const analysis = await analyzeAgent(identity, reputation, agentId, validation);
+
+    // ── DECIDE (adaptive threshold + trust gating) ──
     const threshold = getAdaptiveThreshold(config.minReputation);
     const decision = decideAction(analysis, threshold);
 
@@ -374,7 +386,20 @@ async function processAgent(
 
     log("decide", `Approved: ${decision.reason}`, agentId);
 
-    // HEALTH CHECK before spending gas
+    // ── PLAN (explicit planning before execution) ──
+    const gasBalance = await ethers.provider.getBalance(signer.address);
+    const plan = planBridge(analysis, config.destEids, gasBalance);
+    log("plan", `Execution plan for Agent #${agentId}:`, agentId);
+    plan.forEach(step => log("plan", `  → ${step}`, agentId));
+
+    // Budget check from plan
+    if (plan.some(s => s.includes("INSUFFICIENT"))) {
+      state.pendingAgents.add(agentId);
+      log("plan", `Deferred — insufficient gas budget`, agentId);
+      return;
+    }
+
+    // ── HEALTH CHECK before spending gas ──
     const healthy = await checkHealth(signer, config);
     if (!healthy) {
       state.pendingAgents.add(agentId);
@@ -382,18 +407,36 @@ async function processAgent(
       return;
     }
 
-    // EXECUTE
+    // ── EXECUTE ──
     state.totalBridgeAttempts++;
     const result = await executeBridge(bridge, agentId, config.destEids);
 
-    // VERIFY + SELF-REPUTATION
+    // ── VERIFY ──
     await verifyBridge(result, agentId, config.destEids);
+
+    // ── POST-BRIDGE: update reputation (give feedback to bridged agent) ──
     if (result.success) {
       state.successfulBridges++;
       await recordSelfReputation(reputation, true);
+
+      // Give positive feedback to the bridged agent (trust graph building)
+      try {
+        await reputation.giveFeedback(agentId, 80, 0, "bridge-success", "");
+        log("trust", `Gave positive feedback (80) to Agent #${agentId} — trust graph grows`, agentId);
+      } catch {
+        log("trust", `[Demo] Would give feedback to Agent #${agentId} on-chain`, agentId);
+      }
     } else {
       state.failedBridges++;
       await recordSelfReputation(reputation, false);
+    }
+
+    // ── COMPUTE BUDGET: track gas per operation ──
+    const balanceAfter = await ethers.provider.getBalance(signer.address);
+    const gasCost = balanceBefore - balanceAfter;
+    if (gasCost > 0n) {
+      log("budget", `Operation cost: ${ethers.formatEther(gasCost)} ETH for Agent #${agentId}`, agentId);
+      state.computeBudget.push({ agentId, gasCost });
     }
 
     state.processedAgents.add(agentId);
@@ -411,41 +454,83 @@ interface AgentAnalysis {
   reputationAvg: number;
   reputationCount: number;
   reputationTotal: number;
+  validationAvg: number;
+  validationCount: number;
 }
 
-async function analyzeAgent(identity: any, reputation: any, agentId: number): Promise<AgentAnalysis> {
-  log("analyze", `Reading on-chain data...`, agentId);
+async function analyzeAgent(identity: any, reputation: any, agentId: number, validation?: any): Promise<AgentAnalysis> {
+  log("analyze", `Reading on-chain data (identity + reputation + validation)...`, agentId);
 
   const owner = await identity.ownerOf(agentId);
   const uri = await identity.tokenURI(agentId);
-  const summary = await reputation.getSummary(agentId);
+  const repSummary = await reputation.getSummary(agentId);
+
+  let valAvg = 0, valCount = 0;
+  if (validation) {
+    try {
+      const valSummary = await validation.getSummary(agentId);
+      valAvg = Number(valSummary.averageScore);
+      valCount = Number(valSummary.validationCount);
+    } catch { /* validation registry may not exist in all envs */ }
+  }
 
   const analysis: AgentAnalysis = {
     agentId, owner, uri,
-    reputationAvg: Number(summary.averageValue),
-    reputationCount: Number(summary.feedbackCount),
-    reputationTotal: Number(summary.totalValue),
+    reputationAvg: Number(repSummary.averageValue),
+    reputationCount: Number(repSummary.feedbackCount),
+    reputationTotal: Number(repSummary.totalValue),
+    validationAvg: valAvg,
+    validationCount: valCount,
   };
 
   log("analyze", `Owner: ${owner}`, agentId);
   log("analyze", `Reputation: avg=${analysis.reputationAvg}, count=${analysis.reputationCount}`, agentId);
+  log("analyze", `Validation: avg=${analysis.validationAvg}, count=${analysis.validationCount}`, agentId);
   return analysis;
 }
 
 interface BridgeDecision { shouldBridge: boolean; reason: string; }
 
 function decideAction(analysis: AgentAnalysis, threshold: number): BridgeDecision {
+  // Rule 1: Must have reputation feedback
   if (analysis.reputationCount === 0) {
     return { shouldBridge: false, reason: "No reputation feedback yet — waiting for reviews" };
   }
+  // Rule 2: Reputation must meet threshold
   if (analysis.reputationAvg < threshold) {
     return { shouldBridge: false, reason: `Reputation ${analysis.reputationAvg} below threshold ${threshold}` };
   }
+  // Rule 3: TRUST GATE — if validated, reject agents with low validation scores
+  if (analysis.validationCount > 0 && analysis.validationAvg < 40) {
+    return { shouldBridge: false, reason: `Validation score ${analysis.validationAvg}/100 too low — refusing low-trust agent` };
+  }
+
   const confidence = analysis.reputationCount < 2 ? "low" : analysis.reputationCount < 5 ? "medium" : "high";
+  const trustLevel = analysis.validationCount > 0
+    ? ` | validation: ${analysis.validationAvg}/100`
+    : " | no validation data";
+
   return {
     shouldBridge: true,
-    reason: `Reputation ${analysis.reputationAvg} (${analysis.reputationCount} reviews, ${confidence} confidence)`,
+    reason: `Reputation ${analysis.reputationAvg} (${analysis.reputationCount} reviews, ${confidence} confidence${trustLevel})`,
   };
+}
+
+// ============================================================
+// PLAN PHASE — explicit planning before execution
+// ============================================================
+
+function planBridge(analysis: AgentAnalysis, destEids: number[], gasBalance: bigint): string[] {
+  const plan: string[] = [];
+  plan.push(`Target: Agent #${analysis.agentId} (rep: ${analysis.reputationAvg}, val: ${analysis.validationAvg})`);
+  plan.push(`Destinations: ${destEids.length} chain(s) [${destEids.join(", ")}]`);
+  plan.push(`Estimated gas: ~0.0004 ETH per chain (${destEids.length} chains = ~${(0.0004 * destEids.length).toFixed(4)} ETH)`);
+  plan.push(`Available gas: ${ethers.formatEther(gasBalance)} ETH`);
+
+  const canAfford = gasBalance > ethers.parseEther((0.0005 * destEids.length).toFixed(4));
+  plan.push(`Budget check: ${canAfford ? "SUFFICIENT" : "INSUFFICIENT — defer"}`);
+
+  return plan;
 }
 
 async function executeBridge(bridge: any, agentId: number, destEids: number[]) {
@@ -510,6 +595,11 @@ function printSummary() {
   }
   if (state.pendingAgents.size > 0) {
     console.log(`   Pending: [${[...state.pendingAgents].join(", ")}]`);
+  }
+  if (state.computeBudget.length > 0) {
+    const totalCost = state.computeBudget.reduce((s, b) => s + b.gasCost, 0n);
+    const avgCost = totalCost / BigInt(state.computeBudget.length);
+    console.log(`   Compute budget: ${state.computeBudget.length} operations, total: ${ethers.formatEther(totalCost)} ETH, avg: ${ethers.formatEther(avgCost)} ETH/op`);
   }
   console.log(`${"─".repeat(60)}`);
 }
@@ -619,7 +709,7 @@ async function runDemoMode() {
     if (agentId === state.selfAgentId) continue;
     console.log(`\n${"─".repeat(40)}`);
     log("discover", `Event: new agent registered`, agentId);
-    await processAgent(agentId, identity, reputation, bridge, config, deployer);
+    await processAgent(agentId, identity, reputation, bridge, config, deployer, validation);
   }
 
   printSummary();
@@ -641,7 +731,7 @@ async function runDemoMode() {
       console.log(`\n${"─".repeat(40)}`);
       log("discover", `Pending agent now qualifies!`, agentId, { repAvg, repCount });
       state.pendingAgents.delete(agentId);
-      await processAgent(agentId, identity, reputation, bridge, config, deployer);
+      await processAgent(agentId, identity, reputation, bridge, config, deployer, validation);
     }
   }
 

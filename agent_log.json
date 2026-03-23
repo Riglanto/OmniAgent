@@ -56,18 +56,29 @@
       "actions": [
         {
           "step": "analyze-agent-1",
-          "description": "Read on-chain identity and reputation data",
-          "tools": ["identity.ownerOf(1)", "identity.tokenURI(1)", "reputation.getSummary(1)"],
-          "result": { "owner": "0x7099...79C8", "uri": "ipfs://QmAgent1-HighRep", "reputationAvg": 87, "reputationCount": 2 },
+          "description": "Read on-chain identity, reputation, and validation data from all 3 ERC-8004 registries",
+          "tools": ["identity.ownerOf(1)", "identity.tokenURI(1)", "reputation.getSummary(1)", "validation.getSummary(1)"],
+          "result": { "owner": "0x7099...79C8", "uri": "ipfs://QmAgent1-HighRep", "reputationAvg": 87, "reputationCount": 2, "validationAvg": 0, "validationCount": 0 },
           "decision": "Data collected — proceed to decision"
         },
         {
           "step": "decide-agent-1",
-          "description": "Evaluate against adaptive threshold",
-          "input": { "reputationAvg": 87, "reputationCount": 2, "threshold": 50 },
-          "result": "APPROVED — Reputation 87 with 2 reviews (medium confidence)",
+          "description": "Evaluate against adaptive threshold + trust gate on validation score",
+          "input": { "reputationAvg": 87, "reputationCount": 2, "validationAvg": 0, "validationCount": 0, "threshold": 50 },
+          "result": "APPROVED — Reputation 87 with 2 reviews (medium confidence | no validation data)",
           "decision": "Bridge to all destination chains",
-          "reasoning": "Score 87 exceeds threshold 50. 2 reviews provides medium confidence signal. No prior failures — threshold unchanged."
+          "reasoning": "Score 87 exceeds threshold 50. 2 reviews provides medium confidence. No validation data (not penalized — only reject if validated AND score < 40). No prior failures — threshold unchanged."
+        },
+        {
+          "step": "plan-agent-1",
+          "description": "Explicit execution plan before committing gas",
+          "plan": [
+            "Target: Agent #1 (rep: 87, val: 0)",
+            "Destinations: 2 chains [40231, 40232]",
+            "Estimated gas: ~0.0008 ETH (2 chains × ~0.0004 ETH)",
+            "Budget check: SUFFICIENT"
+          ],
+          "decision": "Plan approved — proceed to execute"
         },
         {
           "step": "analyze-agent-2",
@@ -126,9 +137,22 @@
           "decision": "Mark agent #1 as processed"
         },
         {
+          "step": "post-bridge-trust-feedback",
+          "description": "Gave positive reputation feedback (score 80) to Agent #1 after successful bridge",
+          "tool": "reputation.giveFeedback(1, 80, 0, 'bridge-success', '')",
+          "result": "Trust graph updated — Agent #1 now has feedback from bridge agent",
+          "decision": "Building on-chain trust network through verified interactions"
+        },
+        {
           "step": "self-reputation-update",
           "description": "Successful bridge — agent's own reputation grows",
           "result": "Self reputation incremented"
+        },
+        {
+          "step": "compute-budget-tracking",
+          "description": "Tracked gas cost for this operation",
+          "result": { "gasCost": "0.000119 ETH", "cumulativeOps": 1, "avgCostPerOp": "0.000119 ETH" },
+          "decision": "Within budget — continue operations"
         }
       ]
     },
@@ -173,7 +197,12 @@
     "successRate": "100%",
     "adaptiveThresholdChanges": 0,
     "selfReputationGrowth": 2,
-    "gasEfficiency": "0.00035 ETH per bridge"
+    "trustFeedbackGiven": 2,
+    "computeBudget": {
+      "totalOperations": 2,
+      "totalGasCost": "0.000232 ETH",
+      "avgCostPerOperation": "0.000116 ETH"
+    }
   },
   "decisions": [
     { "type": "bridge", "agent": 1, "reason": "Reputation 87 ≥ 50 with 2 reviews — high confidence" },
