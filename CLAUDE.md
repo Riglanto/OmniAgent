@@ -1,8 +1,10 @@
-# Cross-Chain Agent Identity Bridge
+# OmniAgent — Cross-Chain Agent Identity Bridge
 
 ## Project Overview
 
-This is a LayerZero V2 OApp that bridges ERC-8004 agent identity and reputation from Base to other chains (Arbitrum, Optimism). Includes an autonomous agent that monitors registrations and auto-bridges qualified agents. Built for The Synthesis hackathon.
+GitHub: https://github.com/Riglanto/OmniAgent
+
+LayerZero V2 OApp that bridges ERC-8004 agent identity and reputation from Base to other chains (Arbitrum, Optimism). Includes a self-sovereign autonomous agent that monitors registrations and auto-bridges qualified agents. Built for The Synthesis hackathon.
 
 ## Key Contracts
 

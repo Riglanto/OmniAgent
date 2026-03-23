@@ -1,7 +1,7 @@
 {
-  "name": "agent-identity-bridge",
-  "version": "0.1.0",
-  "description": "Cross-chain ERC-8004 agent identity bridge powered by LayerZero V2",
+  "name": "omni-agent",
+  "version": "1.0.0",
+  "description": "OmniAgent — Cross-chain ERC-8004 agent identity bridge powered by LayerZero V2",
   "license": "MIT",
   "scripts": {
     "compile": "hardhat compile",

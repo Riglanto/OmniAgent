@@ -18,7 +18,7 @@ const humanEntries = buildLog.filter((e: any) => e.actor === "human").length;
 const agentEntries = buildLog.filter((e: any) => e.actor === "agent").length;
 
 console.log("╔══════════════════════════════════════════════════════════╗");
-console.log("║          CONVERSATION LOG — HACKATHON SUBMISSION        ║");
+console.log("║          OMNIAGENT — CONVERSATION LOG        ║");
 console.log("╚══════════════════════════════════════════════════════════╝\n");
 
 console.log(`Total entries: ${buildLog.length}`);

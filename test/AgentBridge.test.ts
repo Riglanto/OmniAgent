@@ -16,7 +16,7 @@ function encodePayload(
   );
 }
 
-describe("Agent Identity Bridge", function () {
+describe("OmniAgent", function () {
   const BASE_EID = 30184;
   const ARB_EID = 30110;
 

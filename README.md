@@ -1,8 +1,10 @@
-# Cross-Chain Agent Identity Bridge
+# OmniAgent
 
-Bridge ERC-8004 agent identity and reputation across chains via LayerZero V2. Agents registered on Base can cryptographically prove their identity and reputation on Arbitrum, Optimism, and any LayerZero-supported chain.
+Cross-chain agent identity bridge powered by ERC-8004 × LayerZero V2. Bridge once. Verify forever.
 
-**[Interactive Architecture →](docs/architecture.html)** | **[Animated Flow (How It Works) →](docs/how-it-works.html)**
+Agents registered on Base can cryptographically prove their identity, reputation, and validation status on Arbitrum, Optimism, and any LayerZero-supported chain.
+
+**[Interactive Architecture →](docs/architecture.html)** | **[Animated Flow (How It Works) →](docs/how-it-works.html)** | **[GitHub →](https://github.com/Riglanto/OmniAgent)**
 
 ## Why
 

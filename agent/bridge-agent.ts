@@ -525,7 +525,7 @@ function exportLog(): string {
 async function main() {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║       SELF-SOVEREIGN BRIDGE AGENT (event-driven)        ║
+║       OMNIAGENT — SELF-SOVEREIGN BRIDGE (event-driven)        ║
 ║       bootstrap → discover → analyze → decide →         ║
 ║       execute → verify → adapt                          ║
 ╚══════════════════════════════════════════════════════════╝

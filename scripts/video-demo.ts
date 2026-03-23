@@ -43,7 +43,7 @@ async function main() {
 \x1b[1m\x1b[35m
    ╔══════════════════════════════════════════════════════════════╗
    ║                                                              ║
-   ║   Cross-Chain Agent Identity Bridge                          ║
+   ║   OmniAgent                          ║
    ║                                                              ║
    ║   ERC-8004 × LayerZero V2                                    ║
    ║                                                              ║
@@ -335,7 +335,7 @@ async function main() {
    ║                                                              ║
    ║   Bridge once. Verify forever.                               ║
    ║                                                              ║
-   ║   Built with Claude Code × LayerZero V2                      ║
+   ║   OmniAgent — Built with Claude Code × LayerZero V2                      ║
    ║                                                              ║
    ╚══════════════════════════════════════════════════════════════╝
 \x1b[0m`);
